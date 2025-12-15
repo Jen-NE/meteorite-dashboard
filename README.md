@@ -17,7 +17,7 @@ An interactive data visualization dashboard exploring NASA's meteorite landings 
 
 ## Live Demo
 
-Visit the live dashboard: [https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/](https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/)
+Visit the live dashboard: [https://Jen-NE.github.io/meteorite-dashboard/](https://Jen-NE.github.io/meteorite-dashboard/)
 
 ## Technologies Used
 
