@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meteorite Landings Interactive Dashboard</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+<style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; background-color: #f5f5f5; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 20px; }
+
+        .control-panel { background-color: #ecf0f1; border-radius: 8px; border: 2px solid #bdc3c7; padding: 20px; margin-bottom: 25px; }
+        .control-panel h3 { margin-bottom: 15px; color: #34495e; }
+        .control-row { display: flex; gap: 15px; align-items: flex-start; }
+        .control-group { flex: 1; }
+        .control-group label { font-weight: bold; margin-bottom: 5px; display: block; }
+        select, input[type="range"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .mass-filter { display: flex; flex-direction: column; gap: 5px; }
+        .mass-filter label { font-size: 14px; display: flex; align-items: center; gap: 5px; }
+        
+        .main-view { background-color: #ffffff; border-radius: 8px; border: 1px solid #ddd; padding: 20px; margin-bottom: 25px; }
+        .main-view h3 { margin-bottom: 15px; color: #34495e; }
+        #map { height: 500px; width: 100%; border: 2px solid #ddd; border-radius: 8px; }
+        .selected-country { text-align: center; font-size: 16px; margin-bottom: 10px; font-weight: bold; color: #3498db; }
+        
+        .info-panel { background-color: #ffffff; border-radius: 8px; border: 1px solid #ddd; padding: 20px; margin-bottom: 25px; }
+        .info-subtitle { text-align: center; font-size: 14px; margin-bottom: 15px; color: #7f8c8d; font-style: italic; }
+        .tabs { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
+        .tab { padding: 10px 20px; background-color: #f8f9fa; border: 1px solid #ddd; border-bottom: none; cursor: pointer; margin-right: 5px; }
+        .tab.active { background-color: #ffffff; border-bottom: 2px solid #3498db; color: #3498db; }
+        .tab-content { display: none; padding: 20px; }
+        .tab-content.active { display: block; }
+        
+        /* Fixed: Container now handles relative positioning for inner absolute elements if needed */
+        .chart-container { height: 500px; position: relative; width: 100%; }
+        
+        .loading { display: none; text-align: center; padding: 20px; color: #666; }
+        .year-slider-container { display: flex; gap: 10px; align-items: center; }
+        .year-slider { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 3px; background: #ddd; outline: none; }
+        .year-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #3498db; cursor: pointer; }
+        .year-range-display { text-align: center; margin-top: 5px; font-size: 14px; color: #666; }
+
+        /* --- NEW: Color Blind Safe Cluster Colors (Blue Monochrome Scale) --- */
+        /* Small clusters: Light Blue */
+        .marker-cluster-small {
+            background-color: rgba(166, 206, 227, 0.6) !important;
+        }
+        .marker-cluster-small div {
+            background-color: rgba(166, 206, 227, 1) !important;
+            color: #000 !important;
+        }
+        /* Medium clusters: Medium Blue */
+        .marker-cluster-medium {
+            background-color: rgba(31, 120, 180, 0.6) !important;
+        }
+        .marker-cluster-medium div {
+            background-color: rgba(31, 120, 180, 1) !important;
+            color: #fff !important;
+        }
+        /* Large clusters: Dark Blue */
+        .marker-cluster-large {
+            background-color: rgba(8, 48, 107, 0.6) !important;
+        }
+        .marker-cluster-large div {
+            background-color: rgba(8, 48, 107, 1) !important;
+            color: #fff !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Meteorite Landings Interactive Dashboard</h1>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <h3>Control Panel</h3>
+            <div class="control-row">
+                <div class="control-group">
+                    <label>Class Filter (Multi-Select)</label>
+                    <div class="mass-filter" id="class-filter">
+                        <!-- Classes will be populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Year (Range Slider)</label>
+                    <div class="year-slider-container">
+                        <input type="range" id="year-min" class="year-slider" min="860" max="2020" value="860">
+                        <input type="range" id="year-max" class="year-slider" min="860" max="2020" value="2020">
+                        <div class="year-range-display" id="year-range-display">860 - 2020</div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Mass Class (Multi-Select)</label>
+                    <div class="mass-filter">
+                        <label><input type="checkbox" id="mass-1" value="<=100" checked> ≤100g</label>
+                        <label><input type="checkbox" id="mass-2" value="1000-5000" checked> 1-5kg</label>
+                        <label><input type="checkbox" id="mass-3" value="5000-10000" checked> 5-10kg</label>
+                        <label><input type="checkbox" id="mass-4" value="20000<=" checked> 20+kg</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main View -->
+        <div class="main-view">
+            <h3>Main View: Interactive Map with Clustering</h3>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div class="selected-country" id="selected-country-display">Click on a meteorite to view country data</div>
+                <button id="reset-country" style="padding: 5px 10px;">Reset Country Selection</button>
+                <div id="visible-count" style="margin-left:10px; font-size:14px; color:#555;">Visible: 0</div>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <!-- Information Panel -->
+        <div class="info-panel">
+            <h3>Information Panel (Context-Aware)</h3>
+            <div class="info-subtitle" id="info-subtitle">Showing global data</div>
+
+            <div class="tabs">
+                <div class="tab active" data-tab="tab-1">Occurrences by Year</div>
+                <div class="tab" data-tab="tab-2">Cumulative Sightings</div>
+                <div class="tab" data-tab="tab-3">Mass Distribution by Class</div>
+                <div class="tab" data-tab="tab-4">Top Meteorite Classes</div>
+                <div class="tab" data-tab="tab-5">Mass vs Year Scatter</div>
+                <div class="tab" data-tab="tab-6">Geographic Distribution</div>
+            </div>
+
+            <div id="tab-1" class="tab-content active">
+                <div class="chart-container">
+                    <canvas id="chart1"></canvas>
+                </div>
+            </div>
+
+            <div id="tab-2" class="tab-content">
+                <div class="chart-container">
+                    <canvas id="chart2"></canvas>
+                </div>
+            </div>
+
+            <div id="tab-3" class="tab-content">
+                <div class="chart-container">
+                    <canvas id="chart3"></canvas>
+                </div>
+            </div>
+
+            <div id="tab-4" class="tab-content">
+                <div class="chart-container">
+                    <canvas id="chart4"></canvas>
+                </div>
+            </div>
+
+            <div id="tab-5" class="tab-content">
+                <div class="chart-container">
+                    <canvas id="chart5"></canvas>
+                </div>
+            </div>
+
+            <div id="tab-6" class="tab-content">
+                <div class="chart-container">
+                    <canvas id="chart6" style="display:block;"></canvas>
+                    <!-- Sunburst container; rendered when a country is selected -->
+                    <div id="chart6_sunburst" style="width:100%;height:100%;display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">Loading data...</div>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <!-- Plotly for sunburst charts -->
+    <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
+
+    <!-- Main JavaScript -->
+    <script src="meteorite-dashboard.js"></script>
+</body>
+</html>
