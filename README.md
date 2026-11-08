@@ -1,46 +1,65 @@
-# Meteorite Landings Interactive Dashboard
+# Meteorite Landings Dashboard
 
-An interactive data visualization dashboard exploring NASA's meteorite landings dataset.
+Interactive map and charts of NASA's Meteorite Landings dataset. Plain JavaScript, runs entirely in the browser; Python is used only to clean the data.
+
+**Live demo:** [jen-ne.github.io/meteorite-dashboard](https://Jen-NE.github.io/meteorite-dashboard/)
+
+![Dashboard with filters and clustered map](docs/screenshot.png)
 
 ## Features
 
-- **Interactive Map**: Explore meteorite landing locations with clustering
-- **Dynamic Filtering**: Filter by year, mass class, and meteorite class
-- **Country Selection**: Click on any meteorite to view country-specific data
-- **Multiple Visualizations**:
-  - Occurrences by Year
-  - Cumulative Sightings Over Time
-  - Mass Distribution by Class (Violin Plot)
-  - Top Meteorite Classes
-  - Mass vs Year Scatter Plot
-  - Geographic Distribution
+- Clustered Leaflet map; click a meteorite to select its country.
+- Filters: general class, year range (860–2020), mass (six bins from ≤100 g to ≥20 kg).
+- Six charts that follow the filters and the selected country: landings per year, cumulative discoveries, mass distribution by class (violin plot), top 15 classes, mass vs. year, and geographic distribution (top 20 countries, or a class sunburst for the selected country).
+- Chart data is computed in a Web Worker, with a main-thread fallback.
 
-## Live Demo
+## Data processing
 
-Visit the live dashboard: [https://Jen-NE.github.io/meteorite-dashboard/](https://Jen-NE.github.io/meteorite-dashboard/)
+[process_meteorite_data.py](process_meteorite_data.py) turns the raw NASA file (45,716 records) into the file the dashboard loads:
 
-## Technologies Used
+1. Removes records without coordinates (7,315), with missing or zero mass (138), or without a year (167). 38,096 remain.
+2. Groups the detailed class (`recclass`) into five general classes (Chondrite, Achondrite, Iron, Stony-Iron, Unknown) using regular expressions.
+3. Adds a country code with the offline [reverse-geocoder](https://github.com/thampiman/reverse-geocoder) library (nearest populated place).
 
-- **Leaflet.js**: Interactive maps with marker clustering
-- **Chart.js**: Data visualizations (bar charts, line charts, scatter plots)
-- **Plotly.js**: Advanced violin plots and sunburst charts
-- **PapaParse**: CSV data parsing
-- **Web Workers**: Offload computations for better performance
+When it loads the data, the dashboard also skips records at 0° latitude or longitude (placeholder coordinates) and years outside 860–2020, leaving 31,687 records.
 
-## Local Development
+Limitation: the nearest-place lookup is approximate in remote areas. For example, 6,402 finds south of 60° S are labelled ZA (South Africa).
 
-To run locally:
+## Run locally
+
+From the repository root:
 
 ```bash
-python3 serve.py
+python3 serve.py        # static server, standard library only
 ```
 
-Then open: http://127.0.0.1:8000/javascript-dashboard/meteorite-dashboard.html
+Open http://127.0.0.1:8000/.
 
-## Data Source
+To rebuild the data file:
 
-Data from NASA's Open Data Portal: [Meteorite Landings](https://data.nasa.gov/Space-Science/Meteorite-Landings/gh4g-9sfh)
+```bash
+pip install -r requirements.txt
+python3 process_meteorite_data.py
+```
+
+## Project structure
+
+```
+javascript-dashboard/       the app: HTML, JavaScript, Web Worker, processed CSV
+process_meteorite_data.py   data cleaning and enrichment
+Meteorite_Landings.csv      raw NASA data
+serve.py                    local static file server
+index.html                  redirect to the dashboard (GitHub Pages entry point)
+```
+
+## Built with
+
+Leaflet with Leaflet.markercluster, Chart.js, Plotly.js and PapaParse in the browser; pandas, NumPy and reverse-geocoder for data processing.
+
+## Data source
+
+[Meteorite Landings](https://data.nasa.gov/dataset/meteorite-landings), NASA Open Data Portal (data from The Meteoritical Society). Map tiles © OpenStreetMap contributors.
 
 ## License
 
-MIT License - Feel free to use and modify for your own projects!
+MIT, see [LICENSE](LICENSE).
