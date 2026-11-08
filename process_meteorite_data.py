@@ -150,7 +150,7 @@ def process_meteorite_data(input_csv, output_csv):
 if __name__ == "__main__":
     # Define file names
     INPUT_FILE = "Meteorite_Landings.csv"
-    OUTPUT_FILE = "Meteorite_Landings_Processed.csv"
+    OUTPUT_FILE = "javascript-dashboard/Meteorite_Landings_Processed.csv"
     
     # Run the processing function
     process_meteorite_data(INPUT_FILE, OUTPUT_FILE)

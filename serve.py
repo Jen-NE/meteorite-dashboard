@@ -7,10 +7,10 @@ Why:
 
 Usage:
     python3 serve.py
-    python3 serve.py --port 8080 --bind 127.0.0.1
+    python3 serve.py --port 8000 --bind 127.0.0.1   (the defaults)
 
 Then open:
-    http://127.0.0.1:8000/javascript-dashboard/meteorite-dashboard.html
+    http://127.0.0.1:8000/
 
 This serves the current working directory.
 """
