@@ -33,7 +33,7 @@ def get_general_class(recclass):
     # Iron
     if re.search(r'^Iron', recclass, re.I) or \
        re.match(r'^(I|II|III|IV)[A-F]{1,2}', recclass):
-        return 'superior-Iron'
+        return 'Iron'
         
     # Stony-Iron
     if re.search(r'^Pallasite', recclass, re.I) or \

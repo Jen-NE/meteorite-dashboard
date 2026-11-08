@@ -86,9 +86,8 @@ class MeteoriteDashboard {
         document.getElementById('year-min').addEventListener('input', () => this.updateYearRange());
         document.getElementById('year-max').addEventListener('input', () => this.updateYearRange());
 
-        ['mass-1', 'mass-2', 'mass-3', 'mass-4'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('change', () => this.scheduleFilterUpdate());
+        document.querySelectorAll('input[id^="mass-"]').forEach(el => {
+            el.addEventListener('change', () => this.scheduleFilterUpdate());
         });
 
         document.querySelectorAll('.tab').forEach(tab => {
@@ -311,7 +310,7 @@ class MeteoriteDashboard {
             
             // Build Hierarchy with UNIQUE IDs
             Object.entries(classMap).forEach(([g, subs]) => {
-                // g is "Iron-superior", etc.
+                // g is the general class, e.g. "Iron"
                 const gId = `${rootId}-${g}`;
                 const classTotal = Object.values(subs).reduce((a, b) => a + b, 0);
                 totalCount += classTotal;
@@ -562,7 +561,7 @@ class MeteoriteDashboard {
         const fixed = {
             'Chondrite': border ? '#2980b9' : '#3498db',
             'Achondrite': border ? '#c0392b' : '#e74c3c',
-            'superior-Iron': border ? '#e67e22' : '#f39c12'
+            'Iron': border ? '#e67e22' : '#f39c12'
         };
         if (fixed[cls]) return fixed[cls];
 
@@ -631,6 +630,8 @@ class MeteoriteDashboard {
     
     updateMap() {
         if (!this.markers) return;
+        // A newer update cancels batches still pending from an older one
+        const run = this._mapRun = (this._mapRun || 0) + 1;
         this.markers.clearLayers();
         const rows = this.filteredData || [];
         if (rows.length === 0) {
@@ -641,6 +642,7 @@ class MeteoriteDashboard {
         const batchSize = 1000;
         let idx = 0;
         const addBatch = () => {
+            if (run !== this._mapRun) return;
             const end = Math.min(idx + batchSize, rows.length);
             const layers = [];
             for (let i = idx; i < end; i++) {
@@ -714,10 +716,9 @@ class MeteoriteDashboard {
         const minYear = parseInt(document.getElementById('year-min').value);
         const maxYear = parseInt(document.getElementById('year-max').value);
         const massClasses = [];
-        if (document.getElementById('mass-1').checked) massClasses.push('<=100');
-        if (document.getElementById('mass-2').checked) massClasses.push('1000-5000');
-        if (document.getElementById('mass-3').checked) massClasses.push('5000-10000');
-        if (document.getElementById('mass-4').checked) massClasses.push('20000<=');
+        document.querySelectorAll('input[id^="mass-"]:checked').forEach(cb => {
+            massClasses.push(cb.value);
+        });
         const selectedClasses = [];
         document.querySelectorAll('#class-filter input[type="checkbox"]:checked').forEach(cb => {
             selectedClasses.push(cb.value);
@@ -727,11 +728,14 @@ class MeteoriteDashboard {
             if (selectedClasses.length > 0 && !selectedClasses.includes(row.general_class)) return false;
             if (massClasses.length === 0) return false;
             const mass = row['mass (g)'];
+            // Bins (in grams) cover every mass exactly once
             return massClasses.some(cls => {
                 switch (cls) {
                     case '<=100': return mass <= 100;
-                    case '1000-5000': return mass >= 1000 && mass <= 5000;
-                    case '5000-10000': return mass >= 5000 && mass <= 10000;
+                    case '100-1000': return mass > 100 && mass < 1000;
+                    case '1000-5000': return mass >= 1000 && mass < 5000;
+                    case '5000-10000': return mass >= 5000 && mass < 10000;
+                    case '10000-20000': return mass >= 10000 && mass < 20000;
                     case '20000<=': return mass >= 20000;
                     default: return false;
                 }
